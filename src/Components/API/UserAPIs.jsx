@@ -55,6 +55,8 @@ export const updateReview = (userId, productId, reviewData) =>
 export const getCart = (userId) =>
   axiosInstance.get(`/user/get-cart/${userId}`);
 
+export const getUserDetails = (userId) =>
+  axiosInstance.get(`/user/get-user-details/${userId}`);
 
 export const addToCart = (userId, productId) =>
   axiosInstance.post(`/user/add-to-cart/${userId}/${productId}`);

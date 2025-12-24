@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
@@ -12,650 +11,667 @@ import {
   Chip,
   Container,
   Stack,
-  Pagination,
   TextField,
-  Paper,
-  List,
-  ListItemButton,
-  ListItemText,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Badge,
+  Rating,
+  Pagination,
 } from "@mui/material";
-import Rating from "@mui/material/Rating";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import Footer from "../Others/Footer";
-import Badge from "@mui/material/Badge";
-
-import { getAllProducts, addToCart, getProductDetails,getCart } from "../API/UserAPIs";
-
+import {
+  getAllProducts,
+  getProductDetails,
+  addToCart,
+  getCart,
+  reviewProduct,
+  updateReview,
+} from "../API/UserAPIs";
+import {
+  getAllBrands,
+  getAllCategories,
+} from "../API/PublicAPIs";
 const getRemainingDays = (endDate) => {
-  const end = new Date(endDate);
-  const now = new Date();
-  const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+  const diff = Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24));
   return diff > 0 ? diff : 0;
 };
 
+const HorizontalScroller = ({ children }) => (
+  <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 2 }}>
+    {children}
+  </Box>
+);
+
+const CarouselCard = ({ title, image, discount, onClick }) => (
+  <Card
+    onClick={onClick}
+    sx={{ minWidth: 220, cursor: "pointer", borderRadius: 2 }}
+  >
+    {discount && (
+      <Chip label={discount} color="error" size="small" sx={{ m: 1 }} />
+    )}
+    <CardMedia
+      component="img"
+      height="140"
+      image={image || "/image-placeholder.png"}
+      sx={{ objectFit: "contain" }}
+    />
+    <Typography fontWeight="bold" sx={{ p: 1 }}>
+      {title}
+    </Typography>
+  </Card>
+);
+
 const UserDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const userId = sessionStorage.getItem("userId");
   const token = sessionStorage.getItem("token");
+
+  const [products, setProducts] = useState([]);
+  const [recommended, setRecommended] = useState([]);
+  const [cart, setCart] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedBrand, setSelectedBrand] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState("HOME");
+
+  const [mainImage, setMainImage] = useState("");
+  const [userRating, setUserRating] = useState(0);
+  const [userComment, setUserComment] = useState("");
+
+  const isCartPage = location.pathname.includes("user-cart");
+  const isOrdersPage = location.pathname.includes("user-orders");
+  const isProfilePage = location.pathname.includes("user-profile");
 
   useEffect(() => {
     if (!userId || !token) navigate("/user-login");
   }, [userId, token, navigate]);
 
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
-  const [searchSubmitted, setSearchSubmitted] = useState(false);
-
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedBrand, setSelectedBrand] = useState(null);
-
-  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
-  const [selectedSeller, setSelectedSeller] = useState(null);
-
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [productLoading, setProductLoading] = useState(false);
-
-  const location = useLocation();
-  const isCartPage = location.pathname.includes("user-cart");
-  const isOrdersPage = location.pathname.includes("user-orders");
-
-  // Selected main image in single product view:
-  const [selectedImage, setSelectedImage] = useState(null);
-
-  const [page, setPage] = useState(1);
-  const itemsPerPage = 15;
-
-  const [cart, setCart] = useState([]);
-
   useEffect(() => {
-    const loadCart = async () => {
+    const fetchData = async () => {
       try {
-        const res = await getCart(userId);
-        // Set cart to the array of products, not the whole object
-        setCart(res.data?.carts || []);
-        console.log(res.data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    loadCart();
-  }, [userId]);
+        const resProducts = await getAllProducts(userId);
+        const data = resProducts.data || resProducts;
+        setProducts(data);
   
-
-
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const res = await getAllProducts(userId);
-        setProducts(res.data || res);
-      } finally {
-        setLoading(false);
+        const shuffled = [...data];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        setRecommended(shuffled.slice(0, 10));
+  
+        const resCart = await getCart(userId);
+        setCart(resCart.data?.carts || []);
+      } catch (error) {
+        console.error("Failed to fetch products or cart:", error);
       }
     };
-    loadProducts();
+  
+    fetchData();
   }, [userId]);
+  const [allCategories, setAllCategories] = useState([]);
+const [allBrands, setAllBrands] = useState([]);
+
+const [currentPage, setCurrentPage] = useState(1);
+const productsPerPage = 10;
+
+// Calculate the products to display on current page
+
+const handlePageChange = (event, value) => {
+  setCurrentPage(value);
+};
+
+useEffect(() => {
+  const fetchCategoriesBrands = async () => {
+    try {
+      const categoriesRes = await getAllCategories();
+      setAllCategories(categoriesRes || []);
+
+      const brandsRes = await getAllBrands();
+      setAllBrands(brandsRes || []);
+    } catch (err) {
+      console.error("Failed to fetch categories or brands:", err);
+    }
+  };
+  fetchCategoriesBrands();
+}, []);
+
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      if (searchTerm.trim()) {
-        const term = searchTerm.toLowerCase();
-        if (
-          !p.productName.toLowerCase().includes(term) &&
-          !p.brandName.toLowerCase().includes(term)
-        )
-          return false;
-      }
       if (selectedCategory && p.categoryName !== selectedCategory) return false;
-      if (selectedSubcategory && p.subCategoryName !== selectedSubcategory) return false;
       if (selectedBrand && p.brandName !== selectedBrand) return false;
-      if (selectedSeller && p.sellerName !== selectedSeller) return false;
+      if (
+        searchTerm &&
+        !p.productName.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+        return false;
       return true;
     });
-  }, [products, searchTerm, selectedCategory, selectedSubcategory, selectedBrand, selectedSeller]);
-  
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  }, [products, selectedCategory, selectedBrand, searchTerm]);
+
+  const todayDeals = useMemo(
+    () =>
+      products.filter(
+        (p) => p.discountValue > 0 && getRemainingDays(p.endDate) > 0
+      ),
+    [products]
+  );
+
+  const categories = useMemo(
+    () => [...new Set(products.map((p) => p.categoryName))],
+    [products]
+  );
+
+  const brands = useMemo(
+    () => [...new Set(products.map((p) => p.brandName))],
+    [products]
+  );
+
+  const brandsByCategory = useMemo(() => {
+    const map = {};
+    products.forEach((p) => {
+      if (!map[p.categoryName]) map[p.categoryName] = new Set();
+      map[p.categoryName].add(p.brandName);
+    });
+    return Object.entries(map).map(([category, brands]) => ({
+      category,
+      brands: [...brands],
+    }));
+  }, [products]);
+
   const paginatedProducts = useMemo(() => {
-    return filteredProducts.slice((page - 1) * itemsPerPage, page * itemsPerPage);
-  }, [filteredProducts, page]);
+    const startIndex = (currentPage - 1) * productsPerPage;
+    return filteredProducts.slice(startIndex, startIndex + productsPerPage);
+  }, [filteredProducts, currentPage]);
+  
 
-  // Search suggestions handler
-  const handleSearchChange = (value) => {
-    setSearchTerm(value);
-    setSearchSubmitted(false);
-    if (!value.trim()) return setSuggestions([]);
-    const term = value.toLowerCase();
-    setSuggestions(
-      products
-        .filter(
-          (p) =>
-            p.productName.toLowerCase().includes(term) ||
-            p.brandName.toLowerCase().includes(term)
-        )
-        .slice(0, 6)
+  const handleProductClick = async (id) => {
+    const res = await getProductDetails(userId, id);
+    const product = res.data || res;
+    setSelectedProduct(product);
+    setViewMode("PRODUCT");
+    setMainImage(product.imageFrontView);
+
+    const review = product.allReviews?.find(
+      (r) => r.userId === Number(userId)
     );
+    setUserRating(review?.rating || 0);
+    setUserComment(review?.comment || "");
   };
 
-  // Load single product details on product click
-  const handleProductClick = async (productId) => {
-    setProductLoading(true);
-    try {
-      const res = await getProductDetails(userId, productId);
-      const productData = res.data || res;
-      setSelectedProduct(productData);
 
-      // Reset selectedImage to front view on product change
-      setSelectedImage(productData.imageFrontView);
-    } finally {
-      setProductLoading(false);
+ const handleAddToCart = async (productId) => {
+  try {
+    if (!productId) return;
+
+    const res = await getProductDetails(userId, productId);
+    const product = res.data || res;
+
+    if (!product) {
+      alert("Product details not found. Cannot add to cart.");
+      return;
     }
-  };
+
+    await addToCart(userId, product.productId);
+    const resCart = await getCart(userId);
+    setCart(resCart.data?.carts || []);
+
+    alert(`${product.productName} added to cart!`);
+  } catch (err) {
+    console.error("Failed to add to cart:", err);
+    alert("Failed to add to cart. Please try again.");
+  }
+};
+
+
+
+const handleSubmitReview = async () => {
+  try {
+    const reviewExists = selectedProduct.allReviews?.some(
+      (r) => r.userId === Number(userId)
+    );
+
+    const reviewData = { rating: userRating, comment: userComment };
+
+    if (reviewExists) {
+      await updateReview(userId, selectedProduct.productId, reviewData);
+      alert("Review updated!");
+    } else {
+      await reviewProduct(userId, selectedProduct.productId, reviewData);
+      alert("Review added!");
+    }
+
+    // Refresh product details to show updated review
+    const res = await getProductDetails(userId, selectedProduct.productId);
+    const product = res.data || res;
+    setSelectedProduct(product);
+
+  } catch (error) {
+    console.error(error);
+    // Show backend error message if available
+    if (error.response && error.response.data) {
+      alert(`Error: ${error.response.data}`);
+    } else {
+      alert("Failed to submit review. Please try again.");
+    }
+  }
+};
+
 
   return (
     <>
-      <AppBar position="fixed" sx={{ background: "#0D1B2A" }}>
+      <AppBar position="fixed">
         <Toolbar sx={{ justifyContent: "space-between" }}>
-        <Typography
-      variant="h6"
-      sx={{
-        fontWeight: "bold",
-        display: "flex",
-        alignItems: "center",
-        mb: { xs: 1, sm: 0 }, 
-        cursor:"pointer",
-      }}
-      onClick={() => navigate("/user-dashboard")}
-    >
-      <img
-        src="/Zytra_Logo.png"
-        alt="Zytra Logo"
-        style={{
-          width: 30,
-          height: 30,
-          marginRight: 8,
-          verticalAlign: "middle",
-        }}
-      />
-      Zytra
-    </Typography>
+          <Typography
+            fontWeight="bold"
+            sx={{ cursor: "pointer" }}
+            onClick={() => {
+              if (isCartPage || isOrdersPage || isProfilePage) {
+                navigate("/user-dashboard");
+              } else {
+                setViewMode("HOME");
+              }
+            }}          >
+            Zytra
+          </Typography>
 
-          {!isOrdersPage &&!isCartPage && (
-            <Box sx={{ width: "40%", position: "relative" }}>
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setSearchSubmitted(true);
-                  setSuggestions([]);
-                }
-              }}
-              sx={{ background: "white", borderRadius: 1 }}
-            />
-            {suggestions.length > 0 && (
-              <Paper sx={{ position: "absolute", top: 40, left: 0, right: 0, zIndex: 20 }}>
-                <List>
-                  {suggestions.map((s) => (
-                    <ListItemButton
-                      key={s.productId}
-                      onClick={() => {
-                        handleProductClick(s.productId);
-                        setSuggestions([]);
-                        setSearchSubmitted(true);
-                      }}
-                    >
-                      <ListItemText primary={s.productName} />
-                    </ListItemButton>
-                  ))}
-                </List>
-              </Paper>
-            )}
-          </Box>
-          )}
+          {!isCartPage && !isOrdersPage && !isProfilePage && (
+  <Box sx={{ width: "40%" }}>
+    <TextField
+      fullWidth
+      size="small"
+      placeholder="Search products"
+      value={searchTerm}
+      onChange={(e) => {
+        setSearchTerm(e.target.value);
+        setViewMode("LIST");
+      }}
+      sx={{
+        input: {
+          color: "white",
+        },
+        "& .MuiOutlinedInput-root": {
+          borderRadius: 2,
+          transition: "all 0.3s ease",
+          backgroundColor: "rgba(255,255,255,0.08)",
+
+          "& fieldset": {
+            borderColor: "rgba(255,255,255,0.6)",
+          },
+          "&:hover fieldset": {
+            borderColor: "white",
+          },
+          "&.Mui-focused fieldset": {
+            borderColor: "white",
+            boxShadow: "0 0 8px rgba(255,255,255,0.6)",
+          },
+        },
+        "& input::placeholder": {
+          color: "rgba(255,255,255,0.7)",
+          opacity: 1,
+        },
+      }}
+    />
+  </Box>
+)}
+
           
 
-          <Stack direction="row" spacing={2}>
-          <Button onClick={() => navigate("/user-dashboard/user-cart")} color="inherit">
-  <Badge badgeContent={cart.length} color="error">
-    <ShoppingCartIcon />
-  </Badge>
-</Button>
-
-<Button onClick={() => navigate("/user-dashboard/user-orders")} color="inherit">
-    My Orders
+<Stack direction="row" spacing={2}>
+  {/* Cart */}
+  <Button
+    onClick={() => navigate("user-cart")}
+    sx={{
+      color: "white",
+      borderRadius: 2,
+      px: 2,
+      transition: "all 0.3s ease",
+      "&:hover": {
+        backgroundColor: "rgba(255,255,255,0.15)",
+        transform: "scale(1.08)",
+        boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
+      },
+    }}
+  >
+    <Badge
+      badgeContent={cart.length}
+      color="error"
+      sx={{
+        "& .MuiBadge-badge": {
+          fontSize: "0.75rem",
+        },
+      }}
+    >
+      <ShoppingCartIcon sx={{ fontSize: 26 }} />
+    </Badge>
   </Button>
-            <Button onClick={() => navigate("/profile")} color="inherit">
-              Profile
-            </Button>
-          </Stack>
+
+  {/* Orders */}
+  <Button
+    onClick={() => navigate("user-orders")}
+    sx={{
+      color: "white",
+      fontWeight: 600,
+      borderRadius: 2,
+      px: 2,
+      transition: "all 0.3s ease",
+      "&:hover": {
+        backgroundColor: "rgba(255,255,255,0.15)",
+        transform: "translateY(-2px)",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+      },
+    }}
+  >
+    Orders
+  </Button>
+
+  {/* Profile */}
+  <Button
+    onClick={() => navigate("user-profile")}
+    sx={{
+      color: "white",
+      fontWeight: 600,
+      borderRadius: 2,
+      px: 2,
+      transition: "all 0.3s ease",
+      "&:hover": {
+        backgroundColor: "rgba(255,255,255,0.15)",
+        transform: "translateY(-2px)",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+      },
+    }}
+  >
+    Profile
+  </Button>
+</Stack>
+
         </Toolbar>
       </AppBar>
 
-      { !isOrdersPage && !isCartPage && (
-  <>
-       <Box
-  sx={{
-    position: "fixed",
-    top: 64,
-    width: "100%",
-    background: "#fff",
-    borderBottom: "1px solid #eee",
-    zIndex: 10,
-  }}
->
-  <Container maxWidth="xl">
-    <Stack direction="row" spacing={3} sx={{ py: 2 }} flexWrap="wrap">
+      {!isCartPage && !isOrdersPage && !isProfilePage && (
+        <Container sx={{ mt: 12, mb: 10 }}>
+          {/* HOME VIEW */}
+          {viewMode === "HOME" && (
+            <>
+              <Typography variant="h5">🔥 Today’s Deals</Typography>
+              <HorizontalScroller>
+                {todayDeals.map((p) => (
+                  <CarouselCard
+                    key={p.productId}
+                    title={p.productName}
+                    image={p.imageFrontView}
+                    discount={`${p.discountValue}${p.discountType === 'PERCENT' ? '%' : '₹'} OFF`}
+                    onClick={() => handleProductClick(p.productId)}
+                  />
+                ))}
+              </HorizontalScroller>
 
-      
-      <FormControl size="small" sx={{ minWidth: 160 }}>
-        <InputLabel>Category</InputLabel>
-        <Select
-          value={selectedCategory || ""}
-          label="Category"
-          onChange={(e) => setSelectedCategory(e.target.value || null)}
-        >
-          <MenuItem value="">All</MenuItem>
-          {[...new Set(products.map((p) => p.categoryName))].map((c) => (
-            <MenuItem key={c} value={c}>
-              {c}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {/* SUBCATEGORY FILTER */}
-      <FormControl size="small" sx={{ minWidth: 160 }}>
-        <InputLabel>Subcategory</InputLabel>
-        <Select
-          value={selectedSubcategory || ""}
-          label="Subcategory"
-          onChange={(e) => setSelectedSubcategory(e.target.value || null)}
-        >
-          <MenuItem value="">All</MenuItem>
-          {[...new Set(products.map((p) => p.subCategoryName))].map((sc) => (
-            sc && <MenuItem key={sc} value={sc}>{sc}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {/* BRAND FILTER */}
-      <FormControl size="small" sx={{ minWidth: 160 }}>
-        <InputLabel>Brand</InputLabel>
-        <Select
-          value={selectedBrand || ""}
-          label="Brand"
-          onChange={(e) => setSelectedBrand(e.target.value || null)}
-        >
-          <MenuItem value="">All</MenuItem>
-          {[...new Set(products.map((p) => p.brandName))].map((b) => (
-            <MenuItem key={b} value={b}>
-              {b}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {/* SELLER FILTER */}
-      <FormControl size="small" sx={{ minWidth: 160 }}>
-        <InputLabel>Seller</InputLabel>
-        <Select
-          value={selectedSeller || ""}
-          label="Seller"
-          onChange={(e) => setSelectedSeller(e.target.value || null)}
-        >
-          <MenuItem value="">All</MenuItem>
-          {[...new Set(products.map((p) => p.sellerName))].map((s) => (
-            s && <MenuItem key={s} value={s}>{s}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-    </Stack>
-  </Container>
-</Box>
-  </>
-      )}
- 
-
-
-      {/* CONTENT */}
-      {!isOrdersPage && !isCartPage && (
-  <>
-    <Container maxWidth="xl" sx={{ mt: 20, mb: 10 }}>
-        {loading && (
-          <Typography sx={{ textAlign: "center", mt: 4 }}>
-            Loading products...
-          </Typography>
-        )}
-        {searchSubmitted && !loading && filteredProducts.length === 0 && (
-          <Typography sx={{ textAlign: "center", mt: 4 }}>
-            No products found
-          </Typography>
-        )}
-
-        {/* SINGLE PRODUCT VIEW */}
-        {selectedProduct ? (
-          <>
-            <Button
-              sx={{ mb: 3 }}
-              variant="outlined"
-              onClick={() => setSelectedProduct(null)}
-            >
-              ← Back to products
-            </Button>
-
-            {productLoading ? (
-              <Typography sx={{ textAlign: "center", mt: 6 }}>
-                Loading product details...
+              <Typography variant="h5" sx={{ mt: 4 }}>
+                ⭐ Recommended
               </Typography>
-            ) : (
-              <>
-                {/* Define images array */}
-                {(() => {
-                  const images = [
-                    selectedProduct.imageFrontView,
-                    selectedProduct.imageTopView,
-                    selectedProduct.imageSideView,
-                    selectedProduct.imageBottomView,
-                    ...(selectedProduct.additionalImages || []),
-                  ].filter(Boolean); 
+              <HorizontalScroller>
+                {recommended.map((p) => (
+                  <CarouselCard
+                    key={p.productId}
+                    title={p.productName}
+                    image={p.imageFrontView}
+                    onClick={() => handleProductClick(p.productId)}
+                  />
+                ))}
+              </HorizontalScroller>
 
-                  return (
-                    <Card sx={{ p: 4, borderRadius: 3 }}>
-                      <Grid container spacing={4} sx={{ justifyContent:"center", mt:5,}}>
-                        {/* Thumbnails */}
-                        <Grid
-                          item
-                          xs={2}
-                          sx={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 1,
-                            maxHeight: 400,
-                            overflowY: "auto",
-                          }}
-                        >
-                          {images.map((img, idx) => (
-                            <CardMedia
-                              key={idx}
-                              component="img"
-                              image={img}
-                              alt={`Thumbnail ${idx + 1}`}
-                              sx={{
-                                width: 60,
-                                height: 60,
-                                objectFit: "contain",
-                                border: "1px solid #ccc",
-                                borderRadius: 1,
-                                cursor: "pointer",
-                                "&:hover": {
-                                  borderColor: "primary.main"
-                                }
-                              }}
-                              onClick={() => setSelectedImage(img)}
-                            />
-                          ))}
-                        </Grid>
-
-                        {/* Main image */}
-                        <Grid
-                          item
-                          xs={10}
-                          md={5}
-                          sx={{
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                        >
-                          <CardMedia
-                            component="img"
-                            image={selectedImage || selectedProduct.imageFrontView}
-                            alt={selectedProduct.productName}
-                            sx={{
-                                width: "120%",
-                                height: 400,
-                                objectFit: "contain",
-                                transition: "transform 0.3s ease",
-                                "&:hover": {
-                                  transform: "scale(1.5)"
-                                }
-                              }}
-                          />
-                        </Grid>
-
-                        {/* Product details */}
-                        <Grid item xs={12} md={5}>
-                          {selectedProduct.discountValue > 0 &&
-                            getRemainingDays(selectedProduct.endDate) > 0 && (
-                              <Chip
-                                label={`${selectedProduct.discountValue}% OFF`}
-                                color="error"
-                                sx={{ mb: 1 }}
-                              />
-                            )}
-                          <Typography variant="h4" fontWeight="bold" gutterBottom>
-                            {selectedProduct.productName}
-                          </Typography>
-                          <Typography color="text.secondary" gutterBottom>
-                            Brand: {selectedProduct.brandName}
-                          </Typography>
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                            sx={{ mb: 2 }}
-                          >
-                            <Rating
-                              value={selectedProduct.allReviews?.[0]?.rating || 0}
-                              readOnly
-                            />
-                            <Typography variant="body2">
-                              ({selectedProduct.allReviews?.length || 0} reviews)
-                            </Typography>
-                          </Stack>
-
-                          <Typography
-                            variant="h5"
-                            color="green"
-                            fontWeight="bold"
-                            gutterBottom
-                          >
-                            ₹{selectedProduct.totalPrice}
-                          </Typography>
-
-                          {selectedProduct.discountValue > 0 &&
-                            getRemainingDays(selectedProduct.endDate) > 0 && (
-                              <Typography color="error" gutterBottom>
-                                Offer ends in {getRemainingDays(selectedProduct.endDate)}{" "}
-                                days
-                              </Typography>
-                            )}
-
-                          <Typography sx={{ mb: 3 }}>
-                            {selectedProduct.productDescription}
-                          </Typography>
-
-                          <Button
-  fullWidth
-  size="large"
-  sx={{
-    background: "#f0d264",
-    color: "#000",
-    fontWeight: "bold",
-    "&:hover": { background: "#e6c200" },
-  }}
-  onClick={async () => {
-    try {
-      await addToCart(userId, selectedProduct.productId);
-      setCart((prevCart = []) => [
-        ...prevCart,
-        { cartId: Date.now(), productId: selectedProduct.productId }
-      ]);
-      alert("Product added to cart!");
-      const res = await getCart(userId);
-      setCart(res.data?.carts || []);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to add to cart. Please try again.");
-    }
-  }}
-  
->
-  Add to Cart
-</Button>
-
-                        </Grid>
-                      </Grid>
-                    </Card>
-                  );
-                })()}
-              </>
-            )}
-          </>
-        ) : (
-          // PRODUCT GRID VIEW
-          <Grid container spacing={3}>
-            {paginatedProducts.map((product) => {
-              const hasDiscount =
-                product.discountValue > 0 && getRemainingDays(product.endDate) > 0;
-              return (
-                <Grid item xs={12} sm={6} md={4} key={product.productId}>
-                  <Card
-                    sx={{
-                      height: "100%",
-                      borderRadius: 3,
-                      boxShadow: 2,
-                      cursor: "pointer",
-                      "&:hover": { boxShadow: 6 },
-                      position: "relative",
+              <Typography variant="h5" sx={{ mt: 4 }}>
+                🛍 Shop by Category
+              </Typography>
+              <HorizontalScroller>
+                {categories.map((c) => (
+                  <CarouselCard
+                    key={c}
+                    title={c}
+                    image={allCategories.find(cat => cat.categoryName === c)?.categoryImage}
+                    onClick={() => {
+                      setSelectedCategory(c);
+                      setViewMode("LIST");
                     }}
-                    onClick={() => handleProductClick(product.productId)}
-                  >
-                    {hasDiscount && (
-                      <Chip
-                        label={`${product.discountValue}% OFF`}
-                        color="error"
-                        size="small"
-                        sx={{ position: "absolute", top: 8, left: 8 }}
+                  />
+                ))}
+              </HorizontalScroller>
+
+              <Typography variant="h5" sx={{ mt: 4 }}>
+                🏷 Top Brands
+              </Typography>
+              <HorizontalScroller>
+                {brands.map((b) => (
+                  <CarouselCard
+                    key={b}
+                    title={b}
+                    image={allBrands.find(brand => brand.brandName === b)?.brandImage}
+                    onClick={() => {
+                      setSelectedBrand(b);
+                      setViewMode("LIST");
+                    }}
+                  />
+                ))}
+              </HorizontalScroller>
+
+              <Typography variant="h5" sx={{ mt: 4 }}>
+                🏷 Brands by Category
+              </Typography>
+              {brandsByCategory.map(({ category, brands }) => (
+                <Box key={category} sx={{ mt: 3 }}>
+                  <Typography variant="h6">{category}</Typography>
+                  <HorizontalScroller>
+                    {brands.map((brand) => (
+                      <CarouselCard
+                        key={brand}
+                        title={brand}
+                        image={allBrands.find(brandItem => brandItem.brandName === brand)?.brandImage}
+                        onClick={() => {
+                          setSelectedCategory(category);
+                          setSelectedBrand(brand);
+                          setViewMode("LIST");
+                        }}
                       />
+                    ))}
+                  </HorizontalScroller>
+                </Box>
+              ))}
+            </>
+          )}
+
+         {/* LIST VIEW */}
+       
+{viewMode === "LIST" && (
+  <>
+    <Button
+      onClick={() => {
+        setViewMode("HOME");
+        setSelectedCategory(null);
+        setSelectedBrand(null);
+        setSearchTerm("");
+      }}
+    >
+      ← Back
+    </Button>
+
+    <Grid container spacing={3}>
+      {paginatedProducts.map((p) => (
+        <Grid item xs={12} sm={6} md={4} key={p.productId}>
+          <Card sx={{ p: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <CardMedia
+              component="img"
+              height="200"
+              image={p.imageFrontView}
+              sx={{ objectFit: "contain", cursor: "pointer" }}
+              onClick={() => handleProductClick(p.productId)}
+            />
+            <Box p={2}>
+              <Typography fontWeight="bold">{p.productName}</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1 }}>
+                {p.productDescription.length > 60
+                  ? p.productDescription.substring(0, 20) + "..."
+                  : p.productDescription}
+              </Typography>
+              {p.discountValue > 0 && (
+                <Typography color="error" fontWeight="bold">
+                  {p.discountType === "AMOUNT"
+                    ? `₹${p.discountValue} OFF`
+                    : `${p.discountValue}% OFF`}
+                </Typography>
+              )}
+              <Typography fontWeight="bold" variant="h6">
+                ₹{p.totalPrice}{" "}
+                {p.discountValue > 0 && (
+                  <Typography
+                    component="span"
+                    sx={{ textDecoration: "line-through", color: "#999", ml: 1 }}
+                  >
+                    ₹{p.actualPrice}
+                  </Typography>
+                )}
+              </Typography>
+              <Button
+                variant="contained"
+                fullWidth
+                sx={{ mt: 1 }}
+                onClick={() => handleAddToCart(p.productId)}
+              >
+                Add to Cart
+              </Button>
+            </Box>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+
+    {/* Pagination */}
+    <Box display="flex" justifyContent="center" mt={4}>
+      <Pagination
+        count={Math.ceil(filteredProducts.length / productsPerPage)}
+        page={currentPage}
+        onChange={handlePageChange}
+        color="primary"
+      />
+    </Box>
+  </>
+)}
+
+
+          {/* PRODUCT VIEW */}
+          {viewMode === "PRODUCT" && selectedProduct && (
+            <Box>
+              <Button onClick={() => setViewMode("LIST")}>← Back</Button>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={4} mt={2}>
+                {/* Images */}
+                <Box>
+                  <CardMedia
+                    component="img"
+                    height="400"
+                    image={mainImage}
+                    sx={{ objectFit: "contain", cursor: "pointer" }}
+                  />
+                  <Stack direction="row" spacing={1} mt={1}>
+                    {[selectedProduct.imageFrontView, selectedProduct.imageTopView, selectedProduct.imageSideView, selectedProduct.imageBottomView].map((url, index) => (
+                      <CardMedia
+                        key={index}
+                        component="img"
+                        height="60"
+                        image={url}
+                        sx={{
+                          objectFit: "contain",
+                          border: mainImage === url ? "2px solid #1976d2" : "1px solid #ccc",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => setMainImage(url)}
+                      />
+                    ))}
+                  </Stack>
+                </Box>
+
+                {/* Product Info */}
+                <Box flex={1}>
+                  <Typography variant="h4">{selectedProduct.productName}</Typography>
+
+                  {/* Price & Discount */}
+                  <Box mb={2}>
+                    {selectedProduct.discountValue > 0 && (
+                      <Typography color="error" fontWeight="bold">
+                        {selectedProduct.discountType === "AMOUNT"
+                          ? `₹${selectedProduct.discountValue} OFF`
+                          : `${selectedProduct.discountValue}% OFF`}
+                      </Typography>
                     )}
-                    <CardMedia
-                      component="img"
-                      height="200"
-                      image={product.imageFrontView}
-                      sx={{ objectFit: "contain", p: 2 }}
-                    />
-                    <Box sx={{ p: 2 }}>
-                      <Typography fontWeight="bold" noWrap>
-                        {product.productName}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {product.brandName}
-                      </Typography>
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        alignItems="center"
-                        sx={{ mt: 1 }}
-                      >
-                        <Rating
-                          value={product.allReviews?.[0]?.rating || 0}
-                          readOnly
-                          size="small"
-                        />
-                        <Typography variant="caption">
-                          ({product.allReviews?.length || 0})
+                    <Typography variant="h5" fontWeight="bold">
+                      ₹{selectedProduct.totalPrice}{" "}
+                      {selectedProduct.discountValue > 0 && (
+                        <Typography
+                          component="span"
+                          sx={{ textDecoration: "line-through", color: "#999", ml: 1 }}
+                        >
+                          ₹{selectedProduct.actualPrice}
                         </Typography>
-                      </Stack>
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        alignItems="center"
-                        sx={{ mt: 1 }}
-                      >
-                        {hasDiscount && (
-                          <Typography
-                            variant="body2"
-                            sx={{ textDecoration: "line-through", color: "text.secondary" }}
-                          >
-                            ₹
-                            {Math.round(
-                              product.totalPrice / (1 - product.discountValue / 100)
-                            )}
-                          </Typography>
-                        )}
-                        <Typography fontWeight="bold" color="green">
-                          ₹{product.totalPrice}
-                        </Typography>
-                      </Stack>
-                      <Button
-  fullWidth
-  sx={{
-    mt: 2,
-    background: "#f0d264",
-    color: "#000",
-    fontWeight: "bold",
-    "&:hover": { background: "#e6c200" },
-  }}
-  onClick={async (e) => {
-    e.stopPropagation();
-    try {
-      await addToCart(userId, product.productId);
-      setCart((prevCart = []) => [
-        ...prevCart,
-        { cartId: Date.now(), productId: product.productId }
-      ]);
-      alert("Product added to cart!");
-      const res = await getCart(userId);
-      setCart(res.data?.carts || []);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to add to cart. Please try again.");
-    }
-  }}
-  
->
+                      )}
+                    </Typography>
+                  </Box>
+
+                  {/* Add to Cart */}
+                  <Button variant="contained" sx={{ mb: 2 }} onClick={() => handleAddToCart(selectedProduct.productId)}>
   Add to Cart
 </Button>
 
-                    </Box>
-                  </Card>
-                </Grid>
-              );
-            })}
-          </Grid>
-        )}
 
-        {/* PAGINATION */}
-        {!selectedProduct && totalPages > 1 && (
-          <Stack alignItems="center" sx={{ mt: 4 }}>
-            <Pagination count={totalPages} page={page} onChange={(e, v) => setPage(v)} />
-          </Stack>
-        )}
-      
-      </Container>
-  </>
-  )}
-    
-    {isCartPage && (
-      <Box sx={{ mt: 12, mb: 10 }}>
-        <Outlet />
-      </Box>
-    )}
-    {isOrdersPage && (
-  <Box sx={{ mt: 12, mb: 10 }}>
-    <Outlet /> 
-  </Box>
-)}
+
+                  {/* Description */}
+                  <Typography variant="body1" mb={1}>
+                    {selectedProduct.productDescription}
+                  </Typography>
+                  <Typography variant="subtitle1" color="text.secondary" mb={2}>
+                    {selectedProduct.productSubDescription}
+                  </Typography>
+
+                  {/* Reviews */}
+                  <Box>
+                    <Typography variant="h6" mb={1}>
+                      Your Review
+                    </Typography>
+                    <Rating
+                      value={userRating}
+                      onChange={(e, newValue) => setUserRating(newValue)}
+                    />
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      placeholder="Write your review..."
+                      value={userComment}
+                      onChange={(e) => setUserComment(e.target.value)}
+                      sx={{ mt: 1 }}
+                    />
+                    <Button
+                      variant="outlined"
+                      sx={{ mt: 1 }}
+                      onClick={handleSubmitReview}
+                    >
+                      {selectedProduct.allReviews?.some(r => r.userId === Number(userId)) ? "Update Review" : "Add Review"}
+                    </Button>
+                  </Box>
+                </Box>
+              </Stack>
+            </Box>
+          )}
+        </Container>
+      )}
+
+      {(isCartPage || isOrdersPage || isProfilePage) && (
+        <Box sx={{ mt: 12 }}>
+          <Outlet />
+        </Box>
+      )}
 
       <Footer />
     </>

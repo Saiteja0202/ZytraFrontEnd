@@ -277,12 +277,20 @@ const LandingPage = () => {
         <Toolbar sx={{ justifyContent: "space-between", gap: 2 }}>
           <Typography
             variant="h6"
-            sx={{ fontWeight: "bold", display: "flex", alignItems: "center" }}
+            sx={{ fontWeight: "bold", display: "flex", alignItems: "center", cursor:"pointer" }}
+            onClick={() => {
+              setSelectedProductId(null);
+              setSelectedCategory(null);
+              setSelectedBrand(null);
+              setSearchSubmitted(false);
+              setPage(1);
+            }}
           >
             <img
               src="/Zytra_Logo.png"
               alt="Zytra"
               style={{ width: 30, height: 30, marginRight: 8 }}
+              
             />
             Zytra
           </Typography>
@@ -365,7 +373,7 @@ const LandingPage = () => {
   <Container maxWidth="xl">
     <Stack
       direction="row"
-      spacing={16}
+      spacing={10}
       alignItems="center"
       flexWrap="wrap"
       sx={{ py: 2 }}
