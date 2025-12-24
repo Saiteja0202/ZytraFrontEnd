@@ -18,6 +18,7 @@ import {
   InputLabel,
   Paper,
   Pagination,
+ 
 } from "@mui/material";
 import {
   getCart,
@@ -26,8 +27,16 @@ import {
   initiateOrder,
   orderPayment,
 } from "../API/UserAPIs";
+import { useNavigate} from "react-router-dom";
+import HomeIcon from "@mui/icons-material/Home";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import ShoppingCartCheckoutIcon from "@mui/icons-material/ShoppingCartCheckout";
+
 
 const UserCart = () => {
+  const navigate = useNavigate();
   const userId = sessionStorage.getItem("userId");
   const token = sessionStorage.getItem("token");
 
@@ -45,6 +54,7 @@ const UserCart = () => {
       setLoading(true);
       const res = await getCart(userId);
       setCart(res.data?.carts || []);
+      console.log("carts : ",res.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -143,6 +153,30 @@ const UserCart = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 8, mb: 8 }}>
+
+<Stack
+  direction="row"
+  alignItems="center"
+  spacing={1}
+  sx={{
+    cursor: "pointer",
+    color: "primary.main",
+    transition: "all 0.3s ease",
+    mb:3,
+    "&:hover": {
+      color: "secondary.main",
+      transform: "scale(1.05)",
+    },
+  }}
+  onClick={() => navigate("/user-dashboard")}
+>
+  <HomeIcon fontSize="medium" />
+  <Typography variant="h6" fontWeight="bold">
+    Home
+  </Typography>
+</Stack>
+
+
       <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
         Shopping Cart
       </Typography>
@@ -198,15 +232,14 @@ const UserCart = () => {
                       color="text.secondary"
                       sx={{ textDecoration: "line-through", mr: 1 }}
                     >
-                      ₹{item.totalPrice * item.productQuantity}
+                      ₹{item.actualPrice * item.productQuantity}
                     </Typography>
                     <Typography
                       variant="h6"
                       sx={{ color: "primary.main", fontWeight: "bold" }}
                     >
                       ₹{(
-                        (item.totalPrice * (100 - item.discountValue)) /
-                        100 *
+                        (item.totalPrice)*
                         item.productQuantity
                       ).toLocaleString()}
                     </Typography>
@@ -289,36 +322,70 @@ const UserCart = () => {
         </Button>
       </Box>
 
-      {/* Payment Dialog */}
-      <Dialog
-        open={orderDialogOpen}
-        onClose={() => setOrderDialogOpen(false)}
-        fullWidth
-        maxWidth="xs"
+    {/* Payment Dialog */}
+<Dialog
+  open={orderDialogOpen}
+  onClose={() => setOrderDialogOpen(false)}
+  fullWidth
+  maxWidth="xs"
+>
+  <DialogTitle sx={{ fontWeight: "bold", textAlign: "center" }}>
+    💳 Select Payment Method
+  </DialogTitle>
+
+  <DialogContent sx={{ mt: 1 }}>
+    <FormControl fullWidth sx={{ mt: 2 }}>
+      <InputLabel id="payment-select-label">Payment Type</InputLabel>
+      <Select
+        labelId="payment-select-label"
+        value={paymentType}
+        label="Payment Type"
+        onChange={(e) => setPaymentType(e.target.value)}
       >
-        <DialogTitle sx={{ fontWeight: "bold" }}>Select Payment Method</DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel id="payment-select-label">Payment Type</InputLabel>
-            <Select
-              labelId="payment-select-label"
-              value={paymentType}
-              label="Payment Type"
-              onChange={(e) => setPaymentType(e.target.value)}
-            >
-              <MenuItem value="CARD">Credit/Debit Card</MenuItem>
-              <MenuItem value="UPI">UPI</MenuItem>
-              <MenuItem value="PAYONDELIVERY">Pay on Delivery</MenuItem>
-            </Select>
-          </FormControl>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setOrderDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" color="primary" onClick={handlePayment}>
-            Pay Now
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <MenuItem value="CARD">
+          <Box display="flex" alignItems="center" gap={1}>
+            <CreditCardIcon color="primary" /> Credit/Debit Card
+          </Box>
+        </MenuItem>
+        <MenuItem value="UPI">
+          <Box display="flex" alignItems="center" gap={1}>
+            <AccountBalanceWalletIcon color="success" /> UPI
+          </Box>
+        </MenuItem>
+        <MenuItem value="PAYONDELIVERY">
+          <Box display="flex" alignItems="center" gap={1}>
+            <LocalShippingIcon color="warning" /> Pay on Delivery
+          </Box>
+        </MenuItem>
+      </Select>
+    </FormControl>
+
+    {/* Real-time feel: show a summary */}
+    <Box sx={{ mt: 3, p: 2, bgcolor: "grey.100", borderRadius: 2 }}>
+      <Typography variant="body2" color="text.secondary">
+        Order Total: <strong>₹1,299</strong>
+      </Typography>
+      <Typography variant="caption" color="text.secondary">
+        Secure payment powered by trusted gateways
+      </Typography>
+    </Box>
+  </DialogContent>
+
+  <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
+    <Button onClick={() => setOrderDialogOpen(false)} variant="outlined">
+      Cancel
+    </Button>
+    <Button
+      variant="contained"
+      color="primary"
+      onClick={handlePayment}
+      startIcon={<ShoppingCartCheckoutIcon />}
+    >
+      Pay Now
+    </Button>
+  </DialogActions>
+</Dialog>
+
     </Container>
   );
 };

@@ -14,6 +14,7 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
+  Pagination,
 } from "@mui/material";
 import {
   addProduct,
@@ -41,6 +42,12 @@ const AdminProducts = () => {
 
   const [openAdd, setOpenAdd] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
+  const PRODUCTS_PER_PAGE = 12;
+
+  const [page, setPage] = useState(1);
+
+  
+
 
   const [productForm, setProductForm] = useState({
     categoryId: "",
@@ -63,6 +70,8 @@ const AdminProducts = () => {
 
   const [editingProductId, setEditingProductId] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+
+
 
   useEffect(() => {
     if (!adminId) {
@@ -134,7 +143,11 @@ const AdminProducts = () => {
     );
   });
     
+  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
 
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
   const openAddDialog = () => {
     setProductForm({
       categoryId: "",
@@ -219,6 +232,15 @@ const AdminProducts = () => {
     textTransform: "none",
     "&:hover": { backgroundColor: "#1f2937", borderColor: "#512DA8", boxShadow: "0 0 8px 2px white" },
   };
+
+
+ 
+
+const paginatedProducts = filteredProducts.slice(
+  (page - 1) * PRODUCTS_PER_PAGE,
+  page * PRODUCTS_PER_PAGE
+);
+
 
   return (
     <Container maxWidth="lg" sx={{ mt: 5 }}>
@@ -436,7 +458,7 @@ const AdminProducts = () => {
     </Typography>
   )}
 
-{filteredProducts.map((prod) => (
+{paginatedProducts.map((prod) => (
   <Grid item xs={12} sm={6} md={4} key={prod.productId}>
     <Box
       sx={{
@@ -475,10 +497,31 @@ const AdminProducts = () => {
         Edit
       </Button>
     </Box>
+    {totalPages > 1 && (
+  <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+    <Pagination
+      count={totalPages}
+      page={page}
+      onChange={(e, value) => setPage(value)}
+      color="primary"
+      sx={{
+        "& .MuiPaginationItem-root": {
+          color: "white",
+        },
+        "& .Mui-selected": {
+          backgroundColor: "#512DA8 !important",
+        },
+      }}
+    />
+  </Box>
+)}
+
   </Grid>
+  
 ))}
 
         </Grid>
+  
       </Box>
 
       <Dialog

@@ -18,6 +18,7 @@ import AdminAllUsers from './Components/Admin/AdminAllUsers';
 import UserDashboard from './Components/User/UserDashboard';
 import UserCart from './Components/User/UserCart';
 import UserOrders from './Components/User/UserOrders';
+import UserProfile from './Components/User/UserProfile';
 import AuthGuard from './Components/API/AuthGuard';
 
 const AppRoutes = () => {
@@ -47,6 +48,7 @@ const AppRoutes = () => {
       <Route index element={<UserDashboard />} />
       <Route path="user-cart" element={<UserCart />} />
       <Route path="user-orders" element={<UserOrders />} />
+      <Route path="user-profile" element={<UserProfile />} />
       </Route>
 
     </Routes>
