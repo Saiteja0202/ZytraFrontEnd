@@ -9,16 +9,18 @@ import {
 } from "@mui/material";
 
 import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
+  Treemap,
+  RadialBarChart,
+  RadialBar,
+  ScatterChart,
+  Scatter,
   XAxis,
   YAxis,
+  ZAxis,
   Tooltip,
   ResponsiveContainer,
   Legend,
+  Cell,
 } from "recharts";
 
 import {
@@ -29,31 +31,51 @@ import {
   getAllProducts,
 } from "../API/AdminAPIs";
 
-const COLORS = [
-  "#6366f1",
-  "#22c55e",
-  "#f59e0b",
-  "#ef4444",
-  "#06b6d4",
-  "#a855f7",
-];
+/* -------------------- Utility -------------------- */
+
+// Generate N random colors
+const generateColors = (length) => {
+  const colors = [];
+  for (let i = 0; i < length; i++) {
+    const hue = Math.floor(Math.random() * 360);
+    colors.push(`hsl(${hue}, 70%, 50%)`);
+  }
+  return colors;
+};
+
+const countItems = (items, key) => {
+  const map = {};
+  items.forEach((i) => {
+    const name = i[key];
+    map[name] = (map[name] || 0) + 1;
+  });
+  return Object.entries(map).map(([name, value]) => ({ name, size: value }));
+};
+
+const getTopItems = (items, key, topN = 10) => {
+  const counted = countItems(items, key);
+  return counted.sort((a, b) => b.size - a.size).slice(0, topN);
+};
 
 /* -------------------- Cards -------------------- */
 
 const StatCard = ({ title, value }) => (
   <Paper
-    elevation={0}
+    elevation={3}
     sx={{
       p: 3,
       borderRadius: 3,
-      background: "linear-gradient(135deg,#1e293b,#0f172a)",
-      color: "#e5e7eb",
+      background: "linear-gradient(135deg,#f8fafc,#f1f5f9)",
+      color: "#111827",
+      textAlign: "center",
+      transition: "transform 0.2s ease",
+      "&:hover": { transform: "scale(1.03)" },
     }}
   >
     <Typography variant="body2" sx={{ opacity: 0.7 }}>
       {title}
     </Typography>
-    <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
+    <Typography variant="h4" sx={{ fontWeight: 700, mt: 1, color: "#2563eb" }}>
       {value}
     </Typography>
   </Paper>
@@ -61,20 +83,20 @@ const StatCard = ({ title, value }) => (
 
 const ChartCard = ({ title, height = 420, children }) => (
   <Paper
-    elevation={0}
+    elevation={2}
     sx={{
       p: 3,
       borderRadius: 3,
       height,
       display: "flex",
       flexDirection: "column",
-      background: "linear-gradient(135deg,#020617,#020617)",
-      border: "1px solid #1f2937",
+      background: "#ffffff",
+      border: "1px solid #e5e7eb",
     }}
   >
     <Typography
       variant="h6"
-      sx={{ mb: 2, color: "#e5e7eb", fontWeight: 600 }}
+      sx={{ mb: 2, color: "#111827", fontWeight: 600 }}
     >
       {title}
     </Typography>
@@ -139,19 +161,10 @@ const AdminReports = () => {
       </Typography>
     );
 
-  const countItems = (items, key) => {
-    const map = {};
-    items.forEach((i) => (map[i[key]] = (map[i[key]] || 0) + 1));
-    return Object.entries(map).map(([name, value]) => ({ name, value }));
-  };
-
-  const renderPieLabel = ({ name, percent }) =>
-    `${name} ${(percent * 100).toFixed(0)}%`;
-
   return (
     <Container maxWidth="xl" sx={{ mt: 6 }}>
-      <Typography variant="h4" sx={{ fontWeight: 800, mb: 4 }}>
-        Real Time Analysis
+      <Typography variant="h4" sx={{ fontWeight: 800, mb: 4, color: "#111827" }}>
+        Real-Time Reports
       </Typography>
 
       {/* KPI CARDS */}
@@ -170,82 +183,73 @@ const AdminReports = () => {
         </Grid>
       </Grid>
 
-      {/* CHARTS – ONE PER ROW */}
+      {/* CHARTS */}
       <Grid container spacing={4}>
-        <Grid item xs={12}>
-          <ChartCard title="Categories Distribution">
+        {/* Categories Treemap */}
+        <Grid item xs={12} md={6}>
+          <ChartCard title="Category Distribution (Treemap)">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={countItems(data.categories, "categoryName")}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="value">
-                  {COLORS.map((c, i) => (
-                    <Cell key={i} fill={c} />
-                  ))}
-                </Bar>
-              </BarChart>
+              <Treemap
+                data={countItems(data.categories, "categoryName")}
+                dataKey="size"
+                stroke="#fff"
+              >
+                {countItems(data.categories, "categoryName").map((entry, i) => (
+                  <Cell key={`cell-${i}`} fill={generateColors(data.categories.length)[i]} />
+                ))}
+              </Treemap>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>
 
-        <Grid item xs={12}>
-          <ChartCard title="Brands Share">
+        {/* Brand Radial Gauge */}
+        <Grid item xs={12} md={6}>
+          <ChartCard title="Brand Share (Radial Gauge)">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={countItems(data.brands, "brandName")}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius="55%"
-                  outerRadius="80%"
-                  label={renderPieLabel}
+              <RadialBarChart
+                cx="50%"
+                cy="50%"
+                innerRadius="20%"
+                outerRadius="90%"
+                barSize={15}
+                data={getTopItems(data.brands, "brandName", 8)}
+              >
+                <RadialBar
+                  minAngle={15}
+                  label={{ position: "insideStart", fill: "#fff" }}
+                  background
+                  clockWise
+                  dataKey="size"
                 >
-                  {COLORS.map((c, i) => (
-                    <Cell key={i} fill={c} />
+                  {getTopItems(data.brands, "brandName", 8).map((entry, i) => (
+                    <Cell key={`cell-${i}`} fill={generateColors(8)[i]} />
                   ))}
-                </Pie>
+                </RadialBar>
                 <Tooltip />
                 <Legend />
-              </PieChart>
+              </RadialBarChart>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>
 
+        {/* Sellers Bubble Grid */}
         <Grid item xs={12}>
-          <ChartCard title="Top Sellers">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={countItems(data.sellers, "sellerName")}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="value" fill="#22c55e" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </Grid>
-
-        <Grid item xs={12}>
-          <ChartCard title="Products Share">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={countItems(data.products, "productName")}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius="55%"
-                  outerRadius="80%"
-                  label={renderPieLabel}
+          <ChartCard title="Seller vs Product Popularity (Bubble Grid)">
+            <ResponsiveContainer width="100%" height={400}>
+              <ScatterChart>
+                <XAxis type="category" dataKey="name" />
+                <YAxis type="number" dataKey="size" />
+                <ZAxis type="number" range={[60, 400]} />
+                <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+                <Scatter
+                  name="Sellers"
+                  data={getTopItems(data.sellers, "sellerName", 10)}
                 >
-                  {COLORS.map((c, i) => (
-                    <Cell key={i} fill={c} />
+                  {getTopItems(data.sellers, "sellerName", 10).map((entry, i) => (
+                    <Cell key={`cell-${i}`} fill={generateColors(10)[i]} />
                   ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
+                </Scatter>
+              </ScatterChart>
             </ResponsiveContainer>
           </ChartCard>
         </Grid>

@@ -363,7 +363,7 @@ const UserCart = () => {
     {/* Real-time feel: show a summary */}
     <Box sx={{ mt: 3, p: 2, bgcolor: "grey.100", borderRadius: 2 }}>
       <Typography variant="body2" color="text.secondary">
-        Order Total: <strong>₹1,299</strong>
+        Order Total: <strong>{totalPrice}</strong>
       </Typography>
       <Typography variant="caption" color="text.secondary">
         Secure payment powered by trusted gateways
