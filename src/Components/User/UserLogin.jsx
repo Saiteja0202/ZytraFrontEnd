@@ -63,11 +63,11 @@ const UserLogin = () => {
 
     try {
       const response = await loginUser(formData);
-      const { token, userId, role } = response.data;
+      const { userId, userRole, token } = response.data;
 
       sessionStorage.setItem('token', token);
       sessionStorage.setItem('userId', userId);
-      sessionStorage.setItem('role', role);
+      sessionStorage.setItem('role', userRole);
 
       window.alert('Login successful. Redirecting to user dashboard…');
       navigate('/user-dashboard');

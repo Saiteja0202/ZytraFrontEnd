@@ -696,7 +696,8 @@ const LandingPage = () => {
       mt: 7,
       p: 2,
       display: "flex",
-      gap: 2
+      gap: 2,
+  
     }}
   >
     {/* VERTICAL THUMBNAILS */}
@@ -708,6 +709,7 @@ const LandingPage = () => {
             component="img"
             src={img}
             sx={{
+             
               width: 60,
               height: 60,
               objectFit: "contain",
@@ -716,7 +718,8 @@ const LandingPage = () => {
               cursor: "pointer",
               "&:hover": {
                 borderColor: "primary.main"
-              }
+              },
+            
             }}
             onClick={(e) => {
               const mainImg =

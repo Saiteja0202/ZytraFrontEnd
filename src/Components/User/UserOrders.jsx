@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getOrdersDetails, orderPayment } from "../API/UserAPIs";
+import jsPDF from "jspdf";
 import {
   Card,
   CardContent,
@@ -97,6 +98,70 @@ const UserOrders = () => {
     );
   });
 
+
+  
+
+
+const generateInvoice = (order) => {
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.text("Order Invoice", 14, 22);
+
+  doc.setFontSize(12);
+  doc.text(`Order ID: ${order.orderId}`, 14, 32);
+  doc.text(`Order Date: ${new Date(order.orderDate).toDateString()}`, 14, 40);
+
+  const rawAddress =
+  order.groupsByPaymentType?.[0]?.groupsByPaymentStatus?.[0]?.userAddress;
+
+if (rawAddress) {
+  const formattedAddress = rawAddress.replace(/\s+/g, ", ");
+  const lines = doc.splitTextToSize(formattedAddress, 180);
+  doc.text("Shipping Address:", 14, 48);
+  doc.text(lines, 14, 56);
+}
+
+
+
+  let yPos = 70;
+  let grandTotal = 0;
+
+  order.groupsByPaymentType.forEach((paymentGroup) => {
+    paymentGroup.groupsByPaymentStatus.forEach((statusGroup) => {
+      statusGroup.orderItems.forEach((item) => {
+        const itemTotal = item.totalPrice * item.productQuantity;
+        grandTotal += itemTotal;
+
+        doc.setFontSize(12);
+        doc.text(`Product: ${item.productName}`, 14, yPos);
+        doc.text(`Quantity: ${item.productQuantity}`, 14, yPos + 6);
+        doc.text(`Price: Rs ${item.totalPrice}.00`, 14, yPos + 12);
+        doc.text(`Shipping Status: ${item.shippingStatus}`, 14, yPos + 18);
+
+        if (item.image) {
+          try {
+            doc.addImage(item.image, "JPEG", 150, yPos, 40, 40);
+          } catch (err) {
+            console.warn("Image could not be added:", err);
+          }
+        }
+
+        yPos += 50;
+      });
+    });
+  });
+
+  doc.setFontSize(14);
+  doc.text(`Total: Rs ${grandTotal.toString()}.00`, 14, yPos + 10);
+
+  doc.save(`Invoice_${order.orderId}.pdf`);
+};
+
+  
+  
+  
+
   if (loading)
     return (
       <Box mt={6} textAlign="center">
@@ -168,6 +233,16 @@ const UserOrders = () => {
             Order placed on {new Date(order.orderDate).toDateString()}
           </Typography>
 
+          <Button
+  variant="outlined"
+  size="small"
+  sx={{ mt: 1, ml: 2 }}
+  onClick={() => generateInvoice(order)}
+>
+  Invoice
+</Button>
+
+
           <Divider sx={{ my: 2 }} />
 
           {order.groupsByPaymentType.map((paymentGroup, idx) => (
@@ -218,9 +293,13 @@ const UserOrders = () => {
                               <Typography variant="body2">
                                 ₹{(item.totalPrice * item.productQuantity).toLocaleString()}
                               </Typography>
-                              <Typography variant="caption" color="error">
-                                {item.shippingStatus}
-                              </Typography>
+                              <Typography variant="body2">
+  Order Status : 
+  <Typography component="span" variant="caption" color="error">
+   {item.shippingStatus}
+  </Typography>
+</Typography>
+
                             </Box>
                           </Stack>
                         </Card>
