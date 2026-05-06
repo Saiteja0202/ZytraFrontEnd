@@ -96,7 +96,7 @@ const UserDashboard = () => {
         const resProducts = await getAllProducts(userId);
         const data = resProducts.data || resProducts;
         setProducts(data);
-  
+        console.log(resProducts.data);
         const shuffled = [...data];
         for (let i = shuffled.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -405,7 +405,7 @@ const handleSubmitReview = async () => {
                     key={p.productId}
                     title={p.productName}
                     image={p.imageFrontView}
-                    discount={`${p.discountValue}${p.discountType === 'PERCENT' ? '%' : '₹'} OFF`}
+                    discount={`${p.discountValue}${p.discountType === 'PERCENTAGE' ? '%' : '₹'} OFF`}
                     onClick={() => handleProductClick(p.productId)}
                   />
                 ))}
@@ -597,6 +597,20 @@ const handleSubmitReview = async () => {
                 <Box flex={1}>
                   <Typography variant="h4">{selectedProduct.productName}</Typography>
 
+                  {/* Reviews Summary */} 
+                  {selectedProduct.allReviews && 
+                  selectedProduct.allReviews.length > 0 &&
+                   ( <Box display="flex" alignItems="center" mb={1}>
+                     <Rating value={ 
+                      selectedProduct.allReviews.reduce((sum, r) => sum + r.rating, 0) / selectedProduct.allReviews.length } 
+                      precision={0.5} readOnly />
+                       <Typography variant="body2" sx={{ ml: 1 }}> 
+                        {( selectedProduct.allReviews.reduce((sum, r) => sum + r.rating, 0) / selectedProduct.allReviews.length ).toFixed(1)} ★ ({selectedProduct.allReviews.length} reviews) 
+                        </Typography>
+                         </Box> 
+                        )}
+
+
                   {/* Price & Discount */}
                   <Box mb={2}>
                     {selectedProduct.discountValue > 0 && (
@@ -607,13 +621,13 @@ const handleSubmitReview = async () => {
                       </Typography>
                     )}
                     <Typography variant="h5" fontWeight="bold">
-                      ₹{selectedProduct.totalPrice}{" "}
+                      ₹{selectedProduct.totalPrice}.00{" "}
                       {selectedProduct.discountValue > 0 && (
                         <Typography
                           component="span"
                           sx={{ textDecoration: "line-through", color: "#999", ml: 1 }}
                         >
-                          ₹{selectedProduct.actualPrice}
+                          ₹{selectedProduct.actualPrice}.00
                         </Typography>
                       )}
                     </Typography>
@@ -660,6 +674,25 @@ const handleSubmitReview = async () => {
                       {selectedProduct.allReviews?.some(r => r.userId === Number(userId)) ? "Update Review" : "Add Review"}
                     </Button>
                   </Box>
+                  {/* Other Users' Reviews */} 
+                  <Box mt={3}> 
+                    <Typography variant="h6" mb={1}> Other Users' Reviews </Typography>
+                     {selectedProduct.allReviews ?.filter(
+                      r => r.userId !== Number(userId)) .map(review => (
+                         <Box key={review.reviewId} 
+                         sx={{ 
+                          border: "1px solid #ccc", 
+                          borderRadius: 2,
+                           p: 2, 
+                           mb: 1 
+                           }} >
+                             <Rating value={review.rating} readOnly /> 
+                             <Typography variant="body2" color="text.secondary"> {review.comment} </Typography>
+                              <Typography variant="caption" color="text.disabled"> 
+                                {new Date(review.createdAt).toLocaleDateString()} </Typography> 
+                                </Box> 
+                              ))} 
+                              </Box>
                 </Box>
               </Stack>
             </Box>

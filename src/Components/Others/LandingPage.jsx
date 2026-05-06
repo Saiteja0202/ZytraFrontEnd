@@ -488,32 +488,40 @@ const LandingPage = () => {
 
       <Container maxWidth="xl" sx={{ mt: 3 }}>
         {isLandingMode && (
-          <>
-            <Typography variant="h5" fontWeight="bold">
-              🔥 Today’s Deals
-            </Typography>
-            <HorizontalScroller>
-  {deals
-    .filter((p) => getRemainingDays(p.endDate) > 0)
-    .map((p) => (
-      <CarouselCard
-        key={p.productId}
-        title={p.productName}
-        image={p.imageFrontView}
-        discount={`${p.discountValue}% OFF`}
-        onClick={() => {
-          setSelectedProductId(p.productId);
-          setSearchTerm("");
-          setSelectedCategory(null);
-          setSelectedBrand(null);
-          setSearchSubmitted(true);
-          setPage(1);
-        }}
-      />
-    ))}
-</HorizontalScroller>
-
-          </>
+         <>
+         <Typography variant="h5" fontWeight="bold">
+           🔥 Today’s Deals
+         </Typography>
+         <HorizontalScroller>
+           {deals
+             .filter((p) => getRemainingDays(p.endDate) > 0)
+             .map((p) => {
+               // Decide discount label based on type
+               const discountLabel =
+                 p.discountType === "PERCENTAGE"
+                   ? `${p.discountValue}% OFF`
+                   : `₹${p.discountValue} OFF`;
+       
+               return (
+                 <CarouselCard
+                   key={p.productId}
+                   title={p.productName}
+                   image={p.imageFrontView}
+                   discount={discountLabel}
+                   onClick={() => {
+                     setSelectedProductId(p.productId);
+                     setSearchTerm("");
+                     setSelectedCategory(null);
+                     setSelectedBrand(null);
+                     setSearchSubmitted(true);
+                     setPage(1);
+                   }}
+                 />
+               );
+             })}
+         </HorizontalScroller>
+       </>
+       
         )}
 
         {isLandingMode && (
@@ -652,25 +660,16 @@ const LandingPage = () => {
   selectedProduct ||
   selectedSeller ||
   isProductView) &&
-  paginatedProducts.map((product) => {
-    const images = [
-      product.imageFrontView,
-      product.imageTopView,
-      product.imageSideView,
-      product.imageBottomView,
-      ...(product.additionalImages || [])
-    ].filter(Boolean);
-
-    const hasDiscount = product.discountValue > 0;
-
-    const actualPrice =
-      hasDiscount && product.discountType === "PERCENTAGE"
-        ? Math.round(
-            product.totalPrice / (1 - product.discountValue / 100)
-          )
-        : hasDiscount
-        ? product.totalPrice + product.discountValue
-        : product.totalPrice;
+  ( paginatedProducts.length > 0 ? 
+    ( paginatedProducts.map((product) => 
+      { const images = [ product.imageFrontView,
+         product.imageTopView, product.imageSideView,
+          product.imageBottomView, ...(product.additionalImages || [])
+         ].filter(Boolean); const hasDiscount = product.discountValue > 0;
+          const actualPrice = hasDiscount &&
+           product.discountType === "PERCENTAGE" ?
+            Math.round( product.totalPrice / (1 - product.discountValue / 100) ) :
+             hasDiscount ? product.totalPrice + product.discountValue : product.totalPrice;
 
     return (
       <Card
@@ -882,7 +881,11 @@ const LandingPage = () => {
         </Grid>
       </Card>
     );
-  })}
+    
+  })
+) : ( <Typography variant="h6" color="error" sx={{ textAlign: "center", mt: 5 }} > No Such Product Found </Typography> )
+  )
+}
 
 
 {(searchSubmitted || selectedCategory || selectedBrand || isProductView) &&

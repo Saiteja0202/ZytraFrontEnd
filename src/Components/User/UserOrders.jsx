@@ -116,7 +116,7 @@ const generateInvoice = (order) => {
   order.groupsByPaymentType?.[0]?.groupsByPaymentStatus?.[0]?.userAddress;
 
 if (rawAddress) {
-  const formattedAddress = rawAddress.replace(/\s+/g, ", ");
+  const formattedAddress = rawAddress;
   const lines = doc.splitTextToSize(formattedAddress, 180);
   doc.text("Shipping Address:", 14, 48);
   doc.text(lines, 14, 56);

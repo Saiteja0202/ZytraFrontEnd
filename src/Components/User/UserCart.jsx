@@ -225,39 +225,48 @@ const UserCart = () => {
                   </Typography>
                 )}
 
-                {item.discountValue && item.discountValue > 0 ? (
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ textDecoration: "line-through", mr: 1 }}
-                    >
-                      ₹{item.actualPrice * item.productQuantity}
-                    </Typography>
-                    <Typography
-                      variant="h6"
-                      sx={{ color: "primary.main", fontWeight: "bold" }}
-                    >
-                      ₹{(
-                        (item.totalPrice)*
-                        item.productQuantity
-                      ).toLocaleString()}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{ color: "green", ml: 1, fontWeight: "bold" }}
-                    >
-                      {item.discountValue}% OFF
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Typography
-                    variant="h6"
-                    sx={{ color: "primary.main", fontWeight: "bold", mb: 1 }}
-                  >
-                    ₹{item.totalPrice * item.productQuantity}
-                  </Typography>
-                )}
+{item.discountValue && item.discountValue > 0 ? (
+  <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+    <Typography
+      variant="body2"
+      color="text.secondary"
+      sx={{ textDecoration: "line-through", mr: 1 }}
+    >
+      ₹{item.actualPrice * item.productQuantity}
+    </Typography>
+    <Typography
+      variant="h6"
+      sx={{ color: "primary.main", fontWeight: "bold" }}
+    >
+      ₹{(item.totalPrice * item.productQuantity).toLocaleString()}.00
+    </Typography>
+
+    {/* Conditional discount rendering */}
+    {item.discountType === "PERCENTAGE" ? (
+      <Typography
+        variant="body2"
+        sx={{ color: "green", ml: 1, fontWeight: "bold" }}
+      >
+        %{item.discountValue} OFF
+      </Typography>
+    ) : (
+      <Typography
+        variant="body2"
+        sx={{ color: "green", ml: 1, fontWeight: "bold" }}
+      >
+        ₹{item.discountValue} OFF
+      </Typography>
+    )}
+  </Box>
+) : (
+  <Typography
+    variant="h6"
+    sx={{ color: "primary.main", fontWeight: "bold", mb: 1 }}
+  >
+    ₹{item.totalPrice * item.productQuantity}.00
+  </Typography>
+)}
+
 
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
                   <Button
@@ -360,10 +369,9 @@ const UserCart = () => {
       </Select>
     </FormControl>
 
-    {/* Real-time feel: show a summary */}
     <Box sx={{ mt: 3, p: 2, bgcolor: "grey.100", borderRadius: 2 }}>
       <Typography variant="body2" color="text.secondary">
-        Order Total: <strong>{totalPrice}</strong>
+        Order Total: ₹ <strong>{totalPrice}.00</strong>
       </Typography>
       <Typography variant="caption" color="text.secondary">
         Secure payment powered by trusted gateways
