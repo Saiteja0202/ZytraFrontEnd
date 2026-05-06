@@ -206,11 +206,11 @@ const UserProfile = () => {
               Change Password
             </Button>
 
-            {user.memberShipStatus !== 'PRIME' && (
+            {/* {user.memberShipStatus !== 'PRIME' && (
               <Button variant="contained" color="success" size="large" onClick={handleSubscribePrime}>
                 Join Prime
               </Button>
-            )}
+            )} */}
             <Button
                         variant="contained"
                         startIcon={<Logout />}
@@ -231,6 +231,41 @@ const UserProfile = () => {
           </Stack>
         </CardContent>
       </Card>
+      {user.memberShipStatus !== 'PRIME' && (
+  <Card sx={{ maxWidth: 1100, mx: 'auto', boxShadow: 3, mt: 3 }}>
+    <CardContent>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography variant="h5" fontWeight={600} color="primary">
+          Upgrade to Prime
+        </Typography>
+      </Stack>
+
+      <Divider sx={{ my: 2 }} />
+
+      <Typography variant="body1" gutterBottom>
+        🚀 Get <b>Next-Day Delivery</b> on all your orders.
+      </Typography>
+      <Typography variant="body1" gutterBottom>
+        💰 Enjoy <b>5% Discount</b> on every product.
+      </Typography>
+      <Typography variant="body2" color="text.secondary" gutterBottom>
+        Become a Prime Member today and unlock exclusive benefits!
+      </Typography>
+
+      <Button
+        variant="contained"
+        color="success"
+        size="large"
+        onClick={handleSubscribePrime}
+        sx={{ mt: 2 }}
+      >
+        Join Prime Now
+      </Button>
+    </CardContent>
+  </Card>
+)}
+
+
 
       {/* UPDATE PROFILE DIALOG */}
       <Dialog open={openProfileDialog} onClose={() => setOpenProfileDialog(false)} fullWidth maxWidth="md">
